@@ -1,0 +1,22 @@
+# Multi-stage build for the Go Helm sidecar.
+# Builder stage: compile the Go binary.
+FROM golang:latest AS builder
+
+WORKDIR /build
+
+# Copy module files first for dependency caching.
+COPY sidecar/go.mod sidecar/go.sum ./
+RUN go mod download
+
+# Copy source and build.
+COPY sidecar/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /sidecar ./cmd/sidecar
+
+# Runtime stage: distroless for minimal attack surface.
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=builder /sidecar /usr/local/bin/sidecar
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/usr/local/bin/sidecar"]

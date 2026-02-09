@@ -1,0 +1,227 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: helmreleases.multitool.wack.run
+  labels:
+    {{- include "multitool-controller.labels" . | nindent 4 }}
+spec:
+  group: multitool.wack.run
+  names:
+    kind: HelmRelease
+    listKind: HelmReleaseList
+    plural: helmreleases
+    singular: helmrelease
+    shortNames:
+      - hr
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Active Slot
+          type: string
+          jsonPath: .status.activeSlot
+        - name: Active Version
+          type: string
+          jsonPath: .status.activeVersion
+        - name: Phase
+          type: string
+          jsonPath: .status.rollout.phase
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - chart
+              properties:
+                chart:
+                  type: object
+                  required:
+                    - repository
+                    - name
+                  properties:
+                    repository:
+                      type: string
+                    name:
+                      type: string
+                updatePolicy:
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      enum: ["Manual", "Auto"]
+                      default: "Manual"
+                    versionConstraint:
+                      type: string
+                    pollInterval:
+                      type: string
+                targetVersion:
+                  type: string
+                values:
+                  x-kubernetes-preserve-unknown-fields: true
+                routing:
+                  type: object
+                  required:
+                    - parentRefs
+                  properties:
+                    parentRefs:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - name
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                          sectionName:
+                            type: string
+                    rules:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - port
+                        properties:
+                          matches:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                path:
+                                  type: object
+                                  properties:
+                                    type:
+                                      type: string
+                                    value:
+                                      type: string
+                                headers:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      value:
+                                        type: string
+                          port:
+                            type: integer
+                            format: int32
+                canary:
+                  type: object
+                  required:
+                    - backend
+                  properties:
+                    backend:
+                      type: string
+                    pollInterval:
+                      type: string
+                    secretRef:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                    profileId:
+                      type: string
+            status:
+              type: object
+              properties:
+                activeSlot:
+                  type: string
+                  enum: ["Red", "Black"]
+                activeVersion:
+                  type: string
+                slots:
+                  type: object
+                  properties:
+                    red:
+                      type: object
+                      properties:
+                        version:
+                          type: string
+                        releaseName:
+                          type: string
+                    black:
+                      type: object
+                      properties:
+                        version:
+                          type: string
+                        releaseName:
+                          type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                rollout:
+                  type: object
+                  properties:
+                    phase:
+                      type: string
+                      enum: ["InProgress", "Promoted", "RolledBack", "Errored", "Cancelled"]
+                    fromVersion:
+                      type: string
+                    toVersion:
+                      type: string
+                    baselineSlot:
+                      type: string
+                      enum: ["Red", "Black"]
+                    canarySlot:
+                      type: string
+                      enum: ["Red", "Black"]
+                    canaryWeight:
+                      type: integer
+                      format: int32
+                    lastBackendPoll:
+                      type: string
+                      format: date-time
+                    backendDecision:
+                      type: string
+                      enum: ["Observing", "Promote", "Rollback"]
+                    startedAt:
+                      type: string
+                      format: date-time
+                    completedAt:
+                      type: string
+                      format: date-time
+                    message:
+                      type: string
+                history:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      phase:
+                        type: string
+                      fromVersion:
+                        type: string
+                      toVersion:
+                        type: string
+                      startedAt:
+                        type: string
+                        format: date-time
+                      completedAt:
+                        type: string
+                        format: date-time
+                      message:
+                        type: string

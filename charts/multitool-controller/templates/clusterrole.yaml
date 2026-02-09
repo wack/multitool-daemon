@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "multitool-controller.fullname" . }}
+  labels:
+    {{- include "multitool-controller.labels" . | nindent 4 }}
+rules:
+  # HelmRelease CRD
+  - apiGroups: ["multitool.wack.run"]
+    resources: ["helmreleases"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["multitool.wack.run"]
+    resources: ["helmreleases/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["multitool.wack.run"]
+    resources: ["helmreleases/finalizers"]
+    verbs: ["update"]
+  # Gateway API HTTPRoutes
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Secrets (for registry auth and backend creds)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  # Events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Leader election
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

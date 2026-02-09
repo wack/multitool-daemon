@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "multitool-controller.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "multitool-controller.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "multitool-controller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "multitool-controller.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "multitool-controller.serviceAccountName" . }}
+      containers:
+        - name: controller
+          image: "{{ .Values.controller.image.repository }}:{{ include "multitool-controller.controllerTag" . }}"
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+          env:
+            - name: SIDECAR_URL
+              value: "http://127.0.0.1:{{ .Values.sidecar.port }}"
+            {{- if .Values.leaderElection.enabled }}
+            - name: LEADER_ELECTION_ENABLED
+              value: "true"
+            - name: LEADER_ELECTION_LEASE_NAME
+              value: {{ .Values.leaderElection.leaseName | quote }}
+            - name: LEADER_ELECTION_LEASE_DURATION
+              value: {{ .Values.leaderElection.leaseDuration | quote }}
+            - name: LEADER_ELECTION_RENEW_DEADLINE
+              value: {{ .Values.leaderElection.renewDeadline | quote }}
+            - name: LEADER_ELECTION_RETRY_PERIOD
+              value: {{ .Values.leaderElection.retryPeriod | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.controller.resources | nindent 12 }}
+        - name: sidecar
+          image: "{{ .Values.sidecar.image.repository }}:{{ include "multitool-controller.sidecarTag" . }}"
+          imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
+          env:
+            - name: SIDECAR_ADDR
+              value: "127.0.0.1:{{ .Values.sidecar.port }}"
+          ports:
+            - name: sidecar
+              containerPort: {{ .Values.sidecar.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: sidecar
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: sidecar
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.sidecar.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

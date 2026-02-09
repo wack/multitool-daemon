@@ -1,0 +1,55 @@
+# Default values for the MultiTool controller Helm chart.
+
+controller:
+  image:
+    repository: ghcr.io/wack-incorporated/multitool-controller
+    tag: ""  # Defaults to .Chart.AppVersion
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+sidecar:
+  image:
+    repository: ghcr.io/wack-incorporated/multitool-sidecar
+    tag: ""  # Defaults to .Chart.AppVersion
+    pullPolicy: IfNotPresent
+  port: 8081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+imagePullSecrets: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+leaderElection:
+  enabled: true
+  leaseName: multitool-controller-leader
+  leaseDuration: 15s
+  renewDeadline: 10s
+  retryPeriod: 2s
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
